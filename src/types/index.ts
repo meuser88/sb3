@@ -220,3 +220,100 @@ export interface QuizResult {
   timeTaken: number;
   certificateEligible: boolean;
 }
+
+// Phase 4 Types
+
+export interface FormTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tags: string[];
+  form: Omit<Form, 'id' | 'createdAt' | 'updatedAt'>;
+  questions: Omit<Question, 'id' | 'formId'>[];
+  isPublic: boolean;
+  createdBy: string;
+  createdAt: string;
+  usageCount: number;
+}
+
+export interface FormVersion {
+  id: string;
+  formId: string;
+  version: number;
+  name: string;
+  description?: string;
+  formData: Form;
+  questionsData: Question[];
+  createdBy: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface AIInsight {
+  id: string;
+  formId: string;
+  type: 'trend' | 'pattern' | 'anomaly' | 'summary';
+  title: string;
+  description: string;
+  data: any;
+  confidence: number;
+  generatedAt: string;
+}
+
+export interface Recommendation {
+  id: string;
+  formId: string;
+  type: 'follow_up_form' | 'improvement' | 'action' | 'certificate';
+  title: string;
+  description: string;
+  actionUrl?: string;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  steps: WorkflowStep[];
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowStep {
+  id: string;
+  type: 'form' | 'delay' | 'condition' | 'action';
+  formId?: string;
+  delay?: number; // in days
+  condition?: ConditionalRule;
+  action?: {
+    type: 'email' | 'redirect' | 'certificate';
+    config: any;
+  };
+  order: number;
+  nextStepId?: string;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  formIds: string[];
+  accessLevel: 'public' | 'team' | 'private';
+  allowedUsers: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResponseTag {
+  id: string;
+  responseId: string;
+  tag: string;
+  color: string;
+  createdBy: string;
+  createdAt: string;
+}

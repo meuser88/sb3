@@ -17,6 +17,13 @@ import FormLogic from './pages/FormLogic';
 import NotificationSettings from './pages/NotificationSettings';
 import CustomEndPage from './pages/CustomEndPage';
 import RoleManagement from './pages/RoleManagement';
+import Library from './pages/Library';
+import VersionControl from './pages/VersionControl';
+import Insights from './pages/Insights';
+import Recommendations from './pages/Recommendations';
+import WorkflowBuilder from './pages/WorkflowBuilder';
+import BulkTools from './pages/BulkTools';
+import Collections from './pages/Collections';
 
 function App() {
   return (
@@ -70,6 +77,41 @@ function App() {
         <Route path="/admin/roles" element={
           <Layout>
             <RoleManagement />
+          </Layout>
+        } />
+        <Route path="/library" element={
+          <Layout>
+            <Library />
+          </Layout>
+        } />
+        <Route path="/versions/:formId" element={
+          <Layout>
+            <VersionControl />
+          </Layout>
+        } />
+        <Route path="/dashboard/:formId/insights" element={
+          <Layout>
+            <Insights />
+          </Layout>
+        } />
+        <Route path="/recommendations/:formId" element={
+          <Layout>
+            <Recommendations />
+          </Layout>
+        } />
+        <Route path="/workflow-builder" element={
+          <Layout>
+            <WorkflowBuilder />
+          </Layout>
+        } />
+        <Route path="/dashboard/:formId/tools" element={
+          <Layout>
+            <BulkTools />
+          </Layout>
+        } />
+        <Route path="/collections" element={
+          <Layout>
+            <Collections />
           </Layout>
         } />
         <Route path="/certificate-editor/:formId" element={

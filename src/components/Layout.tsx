@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ClipboardList, BarChart3, Plus, Home, Settings, Users, Bell } from 'lucide-react';
+import { ClipboardList, BarChart3, Plus, Home, Settings, Users, Bell, BookOpen, Workflow, FolderOpen } from 'lucide-react';
 import { storage } from '../utils/storage';
 
 interface LayoutProps {
@@ -73,6 +73,45 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               >
                 <BarChart3 className="h-4 w-4" />
                 <span>Dashboard</span>
+              </Link>
+              
+              <Link
+                to="/library"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/library')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/library') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Library</span>
+              </Link>
+              
+              <Link
+                to="/workflow-builder"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/workflow-builder')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/workflow-builder') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <Workflow className="h-4 w-4" />
+                <span>Workflows</span>
+              </Link>
+              
+              <Link
+                to="/collections"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/collections')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/collections') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <FolderOpen className="h-4 w-4" />
+                <span>Collections</span>
               </Link>
               
               <Link

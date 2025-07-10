@@ -1,4 +1,4 @@
-import { Form, Question, Response, User, AdminUser, BrandSettings, ActivityLog, ExportRequest, Certificate } from '../types';
+import { Form, Question, Response, User, AdminUser, BrandSettings, ActivityLog, ExportRequest, Certificate, FormTemplate, FormVersion, AIInsight, Recommendation, Workflow, Collection, ResponseTag } from '../types';
 
 class StorageManager {
   private getKey(type: string): string {
@@ -218,6 +218,164 @@ class StorageManager {
   deleteCertificate(id: string): void {
     const certificates = this.getCertificates().filter(c => c.id !== id);
     localStorage.setItem(this.getKey('certificates'), JSON.stringify(certificates));
+  }
+
+  // Form Templates
+  getFormTemplates(): FormTemplate[] {
+    const data = localStorage.getItem(this.getKey('form_templates'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  saveFormTemplate(template: FormTemplate): void {
+    const templates = this.getFormTemplates();
+    const index = templates.findIndex(t => t.id === template.id);
+    if (index >= 0) {
+      templates[index] = template;
+    } else {
+      templates.push(template);
+    }
+    localStorage.setItem(this.getKey('form_templates'), JSON.stringify(templates));
+  }
+
+  getFormTemplate(id: string): FormTemplate | null {
+    const templates = this.getFormTemplates();
+    return templates.find(t => t.id === id) || null;
+  }
+
+  deleteFormTemplate(id: string): void {
+    const templates = this.getFormTemplates().filter(t => t.id !== id);
+    localStorage.setItem(this.getKey('form_templates'), JSON.stringify(templates));
+  }
+
+  // Form Versions
+  getFormVersions(formId: string): FormVersion[] {
+    const data = localStorage.getItem(this.getKey('form_versions'));
+    const versions: FormVersion[] = data ? JSON.parse(data) : [];
+    return versions.filter(v => v.formId === formId).sort((a, b) => b.version - a.version);
+  }
+
+  saveFormVersion(version: FormVersion): void {
+    const versions = this.getAllFormVersions();
+    const index = versions.findIndex(v => v.id === version.id);
+    if (index >= 0) {
+      versions[index] = version;
+    } else {
+      versions.push(version);
+    }
+    localStorage.setItem(this.getKey('form_versions'), JSON.stringify(versions));
+  }
+
+  getAllFormVersions(): FormVersion[] {
+    const data = localStorage.getItem(this.getKey('form_versions'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  // AI Insights
+  getAIInsights(formId: string): AIInsight[] {
+    const data = localStorage.getItem(this.getKey('ai_insights'));
+    const insights: AIInsight[] = data ? JSON.parse(data) : [];
+    return insights.filter(i => i.formId === formId);
+  }
+
+  saveAIInsight(insight: AIInsight): void {
+    const insights = this.getAllAIInsights();
+    insights.push(insight);
+    localStorage.setItem(this.getKey('ai_insights'), JSON.stringify(insights));
+  }
+
+  getAllAIInsights(): AIInsight[] {
+    const data = localStorage.getItem(this.getKey('ai_insights'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  // Recommendations
+  getRecommendations(formId: string): Recommendation[] {
+    const data = localStorage.getItem(this.getKey('recommendations'));
+    const recommendations: Recommendation[] = data ? JSON.parse(data) : [];
+    return recommendations.filter(r => r.formId === formId);
+  }
+
+  saveRecommendation(recommendation: Recommendation): void {
+    const recommendations = this.getAllRecommendations();
+    recommendations.push(recommendation);
+    localStorage.setItem(this.getKey('recommendations'), JSON.stringify(recommendations));
+  }
+
+  getAllRecommendations(): Recommendation[] {
+    const data = localStorage.getItem(this.getKey('recommendations'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  // Workflows
+  getWorkflows(): Workflow[] {
+    const data = localStorage.getItem(this.getKey('workflows'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  saveWorkflow(workflow: Workflow): void {
+    const workflows = this.getWorkflows();
+    const index = workflows.findIndex(w => w.id === workflow.id);
+    if (index >= 0) {
+      workflows[index] = workflow;
+    } else {
+      workflows.push(workflow);
+    }
+    localStorage.setItem(this.getKey('workflows'), JSON.stringify(workflows));
+  }
+
+  getWorkflow(id: string): Workflow | null {
+    const workflows = this.getWorkflows();
+    return workflows.find(w => w.id === id) || null;
+  }
+
+  deleteWorkflow(id: string): void {
+    const workflows = this.getWorkflows().filter(w => w.id !== id);
+    localStorage.setItem(this.getKey('workflows'), JSON.stringify(workflows));
+  }
+
+  // Collections
+  getCollections(): Collection[] {
+    const data = localStorage.getItem(this.getKey('collections'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  saveCollection(collection: Collection): void {
+    const collections = this.getCollections();
+    const index = collections.findIndex(c => c.id === collection.id);
+    if (index >= 0) {
+      collections[index] = collection;
+    } else {
+      collections.push(collection);
+    }
+    localStorage.setItem(this.getKey('collections'), JSON.stringify(collections));
+  }
+
+  getCollection(id: string): Collection | null {
+    const collections = this.getCollections();
+    return collections.find(c => c.id === id) || null;
+  }
+
+  deleteCollection(id: string): void {
+    const collections = this.getCollections().filter(c => c.id !== id);
+    localStorage.setItem(this.getKey('collections'), JSON.stringify(collections));
+  }
+
+  // Response Tags
+  getResponseTags(responseId?: string): ResponseTag[] {
+    const data = localStorage.getItem(this.getKey('response_tags'));
+    const tags: ResponseTag[] = data ? JSON.parse(data) : [];
+    return responseId ? tags.filter(t => t.responseId === responseId) : tags;
+  }
+
+  saveResponseTag(tag: ResponseTag): void {
+    const tags = this.getResponseTags();
+    tags.push(tag);
+    localStorage.setItem(this.getKey('response_tags'), JSON.stringify(tags));
+  }
+
+  deleteResponseTag(id: string): void {
+    const tags = this.getResponseTags().filter(t => t.id !== id);
+    localStorage.setItem(this.getKey('response_tags'), JSON.stringify(tags));
   }
 }
 

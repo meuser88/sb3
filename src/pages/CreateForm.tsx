@@ -251,6 +251,31 @@ const CreateForm: React.FC = () => {
 
             {form.type === 'quiz' && (
               <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Passing Score (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.passingScore || 60}
+                    onChange={(e) => handleFormChange('passingScore', parseInt(e.target.value) || 60)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="60"
+                  />
+                </div>
+
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={form.certificateEnabled}
+                    onChange={(e) => handleFormChange('certificateEnabled', e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Enable Certificate Generation</span>
+                </label>
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"

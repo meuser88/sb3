@@ -344,6 +344,45 @@ const AttemptForm: React.FC = () => {
           </div>
         );
 
+      case 'file_upload':
+        return (
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept={question.fileUploadConfig?.allowedFormats?.join(',') || '.pdf,.jpg,.png'}
+              multiple={question.fileUploadConfig?.multiple || false}
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 0) return;
+                
+                // Check file size
+                const maxSize = (question.fileUploadConfig?.maxFileSize || 5) * 1024 * 1024;
+                const oversizedFiles = files.filter(file => file.size > maxSize);
+                if (oversizedFiles.length > 0) {
+                  alert(`Some files are too large. Maximum size is ${question.fileUploadConfig?.maxFileSize || 5}MB`);
+                  return;
+                }
+                
+                // For demo purposes, just store file names
+                const fileNames = files.map(file => file.name).join(', ');
+                updateAnswer(question.id, fileNames);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required={question.required}
+            />
+            <div className="text-sm text-gray-500">
+              Max size: {question.fileUploadConfig?.maxFileSize || 5}MB • 
+              Allowed: {question.fileUploadConfig?.allowedFormats?.join(', ') || '.pdf, .jpg, .png'}
+              {question.fileUploadConfig?.multiple && ' • Multiple files allowed'}
+            </div>
+            {value && (
+              <div className="text-sm text-green-600">
+                Selected: {value}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }

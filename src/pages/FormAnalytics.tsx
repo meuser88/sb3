@@ -181,6 +181,34 @@ const FormAnalytics: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <Link
+            to={`/certificate-editor/${formId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Award className="h-4 w-4" />
+            <span>Certificate</span>
+          </Link>
+          <Link
+            to={`/form-logic/${formId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Logic</span>
+          </Link>
+          <Link
+            to={`/notifications/${formId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Bell className="h-4 w-4" />
+            <span>Notifications</span>
+          </Link>
+          <Link
+            to={`/custom-endpage/${formId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            <Eye className="h-4 w-4" />
+            <span>End Page</span>
+          </Link>
+          <Link
             to={`/dashboard/${formId}/exports`}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >

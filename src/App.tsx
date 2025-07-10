@@ -12,6 +12,11 @@ import ExportTools from './pages/ExportTools';
 import UserDetail from './pages/UserDetail';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
+import CertificateEditor from './pages/CertificateEditor';
+import FormLogic from './pages/FormLogic';
+import NotificationSettings from './pages/NotificationSettings';
+import CustomEndPage from './pages/CustomEndPage';
+import RoleManagement from './pages/RoleManagement';
 
 function App() {
   return (
@@ -60,6 +65,31 @@ function App() {
         <Route path="/admin/users" element={
           <Layout>
             <AdminUsers />
+          </Layout>
+        } />
+        <Route path="/admin/roles" element={
+          <Layout>
+            <RoleManagement />
+          </Layout>
+        } />
+        <Route path="/certificate-editor/:formId" element={
+          <Layout>
+            <CertificateEditor />
+          </Layout>
+        } />
+        <Route path="/form-logic/:formId" element={
+          <Layout>
+            <FormLogic />
+          </Layout>
+        } />
+        <Route path="/notifications/:formId" element={
+          <Layout>
+            <NotificationSettings />
+          </Layout>
+        } />
+        <Route path="/custom-endpage/:formId" element={
+          <Layout>
+            <CustomEndPage />
           </Layout>
         } />
         <Route path="/settings" element={

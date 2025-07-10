@@ -93,7 +93,7 @@ const CreateForm: React.FC = () => {
       storage.saveQuestions(questions);
 
       if (status === 'published') {
-        navigate(`/forms/${form.id}/summary`);
+        navigate(`/form/${form.id}/summary`);
       } else {
         navigate('/');
       }

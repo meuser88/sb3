@@ -17,21 +17,64 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public routes without layout */}
         <Route path="/attempt/:formId" element={<AttemptForm />} />
         <Route path="/thanks" element={<Thanks />} />
-        <Route path="/*" element={
+        
+        {/* Admin routes with layout */}
+        <Route path="/" element={
           <Layout>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/create" element={<CreateForm />} />
-              <Route path="/forms/:formId/summary" element={<FormSummary />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/:formId" element={<FormAnalytics />} />
-              <Route path="/dashboard/:formId/exports" element={<ExportTools />} />
-              <Route path="/dashboard/:formId/user/:userId" element={<UserDetail />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
+            <Home />
+          </Layout>
+        } />
+        <Route path="/create" element={
+          <Layout>
+            <CreateForm />
+          </Layout>
+        } />
+        <Route path="/form/:formId/summary" element={
+          <Layout>
+            <FormSummary />
+          </Layout>
+        } />
+        <Route path="/dashboard" element={
+          <Layout>
+            <Dashboard />
+          </Layout>
+        } />
+        <Route path="/dashboard/:formId" element={
+          <Layout>
+            <FormAnalytics />
+          </Layout>
+        } />
+        <Route path="/dashboard/:formId/exports" element={
+          <Layout>
+            <ExportTools />
+          </Layout>
+        } />
+        <Route path="/dashboard/:formId/user/:userId" element={
+          <Layout>
+            <UserDetail />
+          </Layout>
+        } />
+        <Route path="/admin/users" element={
+          <Layout>
+            <AdminUsers />
+          </Layout>
+        } />
+        <Route path="/settings" element={
+          <Layout>
+            <Settings />
+          </Layout>
+        } />
+        
+        {/* Catch all route */}
+        <Route path="*" element={
+          <Layout>
+            <div className="text-center py-12">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
+              <p className="text-gray-600">The page you're looking for doesn't exist.</p>
+            </div>
           </Layout>
         } />
       </Routes>

@@ -1,15 +1,36 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Eye, BarChart3, Clock, Users, FileText, Brain, ClipboardList, Award } from 'lucide-react';
+import { Plus, Eye, BarChart3, Clock, Users, FileText, Brain, ClipboardList, Award, Bell, X } from 'lucide-react';
 import { storage } from '../utils/storage';
 import { formatDate } from '../utils';
 
 const Dashboard: React.FC = () => {
   const [selectedForm, setSelectedForm] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'quiz' | 'survey'>('all');
+  const [showNotifications, setShowNotifications] = useState(false);
+  
   const forms = storage.getForms().filter(form => 
     filterType === 'all' || form.type === filterType
   );
+  
+  // Get and manage notifications
+  const [notifications, setNotifications] = useState(() => 
+    JSON.parse(localStorage.getItem('formora_notifications') || '[]')
+  );
+  
+  const markAsRead = (notificationId: string) => {
+    const updated = notifications.map((n: any) => 
+      n.id === notificationId ? { ...n, read: true } : n
+    );
+    setNotifications(updated);
+    localStorage.setItem('formora_notifications', JSON.stringify(updated));
+  };
+  
+  const clearNotification = (notificationId: string) => {
+    const updated = notifications.filter((n: any) => n.id !== notificationId);
+    setNotifications(updated);
+    localStorage.setItem('formora_notifications', JSON.stringify(updated));
+  };
 
   const getFormStats = (formId: string) => {
     const responses = storage.getResponses(formId);
@@ -58,14 +79,94 @@ const Dashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">Manage and analyze your quizzes and surveys</p>
         </div>
-        <Link
-          to="/create"
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create Form</span>
-        </Link>
+        <div className="flex items-center space-x-3">
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <Bell className="h-4 w-4" />
+              {notifications.filter((n: any) => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {notifications.filter((n: any) => !n.read).length}
+                </span>
+              )}
+            </button>
+            
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">Recent Activity</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.slice(0, 10).map((notification: any) => (
+                    <div key={notification.id} className={`p-3 border-b border-gray-100 ${!notification.read ? 'bg-blue-50' : ''}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            New response from {notification.userName}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {notification.formTitle}
+                            {notification.isQuiz && notification.score !== undefined && (
+                              <span className="ml-2 text-blue-600">
+                                Score: {notification.score}/{notification.maxScore}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatDate(notification.submittedAt)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => clearNotification(notification.id)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {!notification.read && (
+                        <button
+                          onClick={() => markAsRead(notification.id)}
+                          className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {notifications.length === 0 && (
+                    <div className="p-4 text-center text-gray-500">
+                      No notifications yet
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <Link
+            to="/create"
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Form</span>
+          </Link>
+        </div>
       </div>
+      
+      {/* Recent Activity Summary */}
+      {notifications.filter((n: any) => !n.read).length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <Bell className="h-5 w-5 text-blue-600" />
+            <span className="font-medium text-blue-900">
+              You have {notifications.filter((n: any) => !n.read).length} new response(s)
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 w-fit">
@@ -173,7 +274,7 @@ const Dashboard: React.FC = () => {
 
               <div className="flex space-x-2">
                 <Link
-                  to={`/forms/${form.id}/summary`}
+                  to={`/form/${form.id}/summary`}
                   className="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
                 >
                   <Eye className="h-4 w-4 mx-auto mb-1" />

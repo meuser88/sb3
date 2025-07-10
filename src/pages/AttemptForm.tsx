@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, User, Mail, Hash, ChevronRight, Brain, Award, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, User, Mail, Hash, ChevronRight, Brain, Award, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { storage } from '../utils/storage';
 import { generateId, shuffleArray, formatTime } from '../utils';
 import { User as UserType, Response, Question } from '../types';
@@ -36,16 +36,26 @@ const AttemptForm: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (!form) return;
+    if (!formId) {
+      navigate('/');
+      return;
+    }
 
-    const formQuestions = storage.getQuestions(formId!);
-    const questionsToShow = form.shuffle ? shuffleArray(formQuestions) : formQuestions;
+    const formData = storage.getForm(formId);
+    if (!formData) {
+      navigate('/');
+      return;
+    }
+
+    setForm(formData);
+    const formQuestions = storage.getQuestions(formId);
+    const questionsToShow = formData.shuffle ? shuffleArray(formQuestions) : formQuestions;
     setQuestions(questionsToShow);
 
-    if (form.timer) {
-      setTimeLeft(form.timer);
+    if (formData.timer) {
+      setTimeLeft(formData.timer);
     }
-  }, [form, formId]);
+  }, [formId, navigate]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -65,12 +75,35 @@ const AttemptForm: React.FC = () => {
     return () => clearInterval(interval);
   }, [currentStep, form?.timer, timeLeft]);
 
-  if (!form) {
+  if (!form || !formId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Form Not Found</h1>
-          <p className="text-gray-600">The form you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">The form you're looking for doesn't exist or has been removed.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (form.status !== 'published') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Form Not Available</h1>
+          <p className="text-gray-600 mb-4">This form is currently in draft mode and not available for responses.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Go Home
+          </button>
         </div>
       </div>
     );
@@ -172,6 +205,25 @@ const AttemptForm: React.FC = () => {
 
       storage.saveResponse(response);
 
+      // Send notification to admin (in a real app, this would be an API call)
+      const adminNotification = {
+        id: generateId(),
+        type: 'new_response',
+        formId: form.id,
+        formTitle: form.title,
+        userName: user.name,
+        userEmail: user.email,
+        submittedAt: response.submittedAt,
+        score: results?.score,
+        maxScore: results?.maxScore,
+        isQuiz: form.type === 'quiz'
+      };
+      
+      // Store notification for admin dashboard
+      const notifications = JSON.parse(localStorage.getItem('formora_notifications') || '[]');
+      notifications.unshift(adminNotification);
+      localStorage.setItem('formora_notifications', JSON.stringify(notifications.slice(0, 50))); // Keep last 50
+
       if (form.type === 'quiz' && form.showResults && results) {
         setQuizResults(results);
         setCurrentStep('results');
@@ -197,7 +249,7 @@ const AttemptForm: React.FC = () => {
 
   const canSubmit = () => {
     if (form.requireAll) {
-      return questions.every(q => q.required ? answers[q.id] !== undefined : true);
+      return questions.every(q => q.required ? answers[q.id] !== undefined && answers[q.id] !== '' : true);
     }
     return Object.keys(answers).length > 0;
   };
@@ -235,7 +287,7 @@ const AttemptForm: React.FC = () => {
         return (
           <div className="space-y-2">
             {question.options.map((option, index) => (
-              <label key={index} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+              <label key={index} className="flex items-center space-x-2 p-3 rounded-md hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors">
                 <input
                   type="radio"
                   name={question.id}
@@ -245,7 +297,7 @@ const AttemptForm: React.FC = () => {
                   className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
                   required={question.required}
                 />
-                <span className="text-gray-700">{option}</span>
+                <span className="text-gray-700 flex-1">{option}</span>
               </label>
             ))}
           </div>
@@ -280,7 +332,7 @@ const AttemptForm: React.FC = () => {
                   className="sr-only"
                   required={question.required}
                 />
-                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-colors ${
+                <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-colors ${
                   value === rating
                     ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-gray-300 text-gray-600 hover:border-blue-400'
@@ -299,14 +351,18 @@ const AttemptForm: React.FC = () => {
 
   if (currentStep === 'identity') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-sm border max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg border max-w-md w-full">
           <div className="text-center mb-6">
             <div className="flex items-center justify-center mb-4">
               {form.type === 'quiz' ? (
-                <Brain className="h-12 w-12 text-blue-600" />
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <Brain className="h-8 w-8 text-blue-600" />
+                </div>
               ) : (
-                <ClipboardList className="h-12 w-12 text-green-600" />
+                <div className="bg-green-100 p-3 rounded-full">
+                  <ClipboardList className="h-8 w-8 text-green-600" />
+                </div>
               )}
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">{form.title}</h1>
@@ -364,7 +420,7 @@ const AttemptForm: React.FC = () => {
 
           <button
             onClick={startForm}
-            className={`w-full mt-6 flex items-center justify-center space-x-2 px-4 py-2 text-white rounded-md transition-colors ${
+            className={`w-full mt-6 flex items-center justify-center space-x-2 px-4 py-3 text-white rounded-md transition-colors font-medium ${
               form.type === 'quiz' 
                 ? 'bg-blue-600 hover:bg-blue-700' 
                 : 'bg-green-600 hover:bg-green-700'
@@ -375,7 +431,7 @@ const AttemptForm: React.FC = () => {
           </button>
 
           {form.timer && (
-            <div className="mt-4 p-3 bg-yellow-50 rounded-md">
+            <div className="mt-4 p-3 bg-yellow-50 rounded-md border border-yellow-200">
               <div className="flex items-center space-x-2 text-yellow-800">
                 <Clock className="h-4 w-4" />
                 <span className="text-sm">
@@ -386,7 +442,7 @@ const AttemptForm: React.FC = () => {
           )}
 
           {form.type === 'quiz' && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
               <div className="flex items-center space-x-2 text-blue-800">
                 <Award className="h-4 w-4" />
                 <span className="text-sm">
@@ -583,11 +639,16 @@ const AttemptForm: React.FC = () => {
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
                 {Object.keys(answers).length} of {questions.length} questions answered
+                {form.requireAll && (
+                  <span className="text-red-500 ml-2">
+                    (All required questions must be answered)
+                  </span>
+                )}
               </p>
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit() || isSubmitting}
-                className={`px-6 py-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`px-6 py-3 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium ${
                   form.type === 'quiz' 
                     ? 'bg-blue-600 hover:bg-blue-700' 
                     : 'bg-green-600 hover:bg-green-700'

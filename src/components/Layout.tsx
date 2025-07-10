@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ClipboardList, BarChart3, Plus, Home, Settings, Users } from 'lucide-react';
+import { ClipboardList, BarChart3, Plus, Home, Settings, Users, Bell } from 'lucide-react';
 import { storage } from '../utils/storage';
 
 interface LayoutProps {
@@ -10,6 +10,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const brandSettings = storage.getBrandSettings();
+  
+  // Get notifications for admin
+  const notifications = JSON.parse(localStorage.getItem('formora_notifications') || '[]');
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path);
@@ -96,6 +100,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
+              
+              {/* Notifications */}
+              <div className="relative">
+                <button className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

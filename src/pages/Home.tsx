@@ -170,7 +170,7 @@ const Home: React.FC = () => {
 
                   <div className="flex space-x-2">
                     <Link
-                      to={`/forms/${form.id}/summary`}
+                      to={`/form/${form.id}/summary`}
                       className="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
                     >
                       View

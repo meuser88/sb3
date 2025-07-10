@@ -1,4 +1,4 @@
-import { Form, Question, Response, User, AdminUser, BrandSettings, ActivityLog, ExportRequest } from '../types';
+import { Form, Question, Response, User, AdminUser, BrandSettings, ActivityLog, ExportRequest, Certificate } from '../types';
 
 class StorageManager {
   private getKey(type: string): string {
@@ -191,6 +191,33 @@ class StorageManager {
       requests.push(request);
     }
     localStorage.setItem(this.getKey('export_requests'), JSON.stringify(requests));
+  }
+
+  // Certificates
+  getCertificates(): Certificate[] {
+    const data = localStorage.getItem(this.getKey('certificates'));
+    return data ? JSON.parse(data) : [];
+  }
+
+  saveCertificate(certificate: Certificate): void {
+    const certificates = this.getCertificates();
+    const index = certificates.findIndex(c => c.id === certificate.id);
+    if (index >= 0) {
+      certificates[index] = certificate;
+    } else {
+      certificates.push(certificate);
+    }
+    localStorage.setItem(this.getKey('certificates'), JSON.stringify(certificates));
+  }
+
+  getCertificate(formId: string): Certificate | null {
+    const certificates = this.getCertificates();
+    return certificates.find(c => c.formId === formId) || null;
+  }
+
+  deleteCertificate(id: string): void {
+    const certificates = this.getCertificates().filter(c => c.id !== id);
+    localStorage.setItem(this.getKey('certificates'), JSON.stringify(certificates));
   }
 }
 

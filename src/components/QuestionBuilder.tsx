@@ -33,7 +33,8 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     { value: 'dropdown', label: 'Dropdown' },
     { value: 'short_text', label: 'Short Text' },
     { value: 'paragraph', label: 'Paragraph' },
-    { value: 'rating', label: 'Rating (1-5)' }
+    { value: 'rating', label: 'Rating (1-5)' },
+    { value: 'file_upload', label: 'File Upload' }
   ];
 
   const addQuestion = () => {
@@ -106,6 +107,10 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     return type === 'mcq' || type === 'dropdown';
   };
 
+  const needsFileConfig = (type: QuestionType) => {
+    return type === 'file_upload';
+  };
+
   const getTrueFalseOptions = () => ['True', 'False'];
 
   return (
@@ -128,6 +133,69 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 )}
               </div>
               <button
+              {needsFileConfig(question.type) && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    File Upload Settings
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Max File Size (MB)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={question.fileUploadConfig?.maxFileSize || 5}
+                        onChange={(e) => updateQuestion(question.id, {
+                          fileUploadConfig: {
+                            ...question.fileUploadConfig,
+                            maxFileSize: parseInt(e.target.value) || 5,
+                            allowedFormats: question.fileUploadConfig?.allowedFormats || ['.pdf', '.jpg', '.png'],
+                            multiple: question.fileUploadConfig?.multiple || false
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Allowed Formats</label>
+                      <input
+                        type="text"
+                        value={question.fileUploadConfig?.allowedFormats?.join(', ') || '.pdf, .jpg, .png'}
+                        onChange={(e) => updateQuestion(question.id, {
+                          fileUploadConfig: {
+                            ...question.fileUploadConfig,
+                            maxFileSize: question.fileUploadConfig?.maxFileSize || 5,
+                            allowedFormats: e.target.value.split(',').map(f => f.trim()),
+                            multiple: question.fileUploadConfig?.multiple || false
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=".pdf, .jpg, .png"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={question.fileUploadConfig?.multiple || false}
+                          onChange={(e) => updateQuestion(question.id, {
+                            fileUploadConfig: {
+                              ...question.fileUploadConfig,
+                              maxFileSize: question.fileUploadConfig?.maxFileSize || 5,
+                              allowedFormats: question.fileUploadConfig?.allowedFormats || ['.pdf', '.jpg', '.png'],
+                              multiple: e.target.checked
+                            }
+                          })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-xs text-gray-700">Multiple files</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
                 onClick={() => deleteQuestion(question.id)}
                 className="text-red-600 hover:text-red-700 transition-colors"
               >
@@ -352,6 +420,22 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   updates.options = [''];
                 } else {
                   updates.options = [];
+                }
+                
+                if (needsFileConfig(newType)) {
+                  updates.fileUploadConfig = {
+                    maxFileSize: 5,
+                    allowedFormats: ['.pdf', '.jpg', '.png'],
+                    multiple: false
+                  };
+                }
+                
+                if (needsFileConfig(newType)) {
+                  updates.fileUploadConfig = {
+                    maxFileSize: 5,
+                    allowedFormats: ['.pdf', '.jpg', '.png'],
+                    multiple: false
+                  };
                 }
                 
                 setNewQuestion({ ...newQuestion, ...updates });

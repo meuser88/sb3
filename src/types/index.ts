@@ -8,6 +8,11 @@ export interface Form {
   requireAll: boolean;
   showResults: boolean; // Show correct answers after completion
   allowRetake: boolean; // Allow multiple attempts
+  passingScore?: number; // Minimum score to pass (percentage)
+  certificateEnabled: boolean; // Enable certificate generation
+  customEndPage?: CustomEndPage; // Custom post-submission page
+  notificationSettings?: NotificationSettings; // Email/notification config
+  conditionalLogic?: ConditionalRule[]; // Form logic rules
   status: 'draft' | 'published';
   createdBy: string; // Creator's name/id
   createdAt: string;
@@ -18,7 +23,7 @@ export interface Question {
   id: string;
   formId: string;
   text: string;
-  type: 'mcq' | 'dropdown' | 'rating' | 'short_text' | 'paragraph' | 'true_false';
+  type: 'mcq' | 'dropdown' | 'rating' | 'short_text' | 'paragraph' | 'true_false' | 'file_upload';
   options: string[];
   correctAnswer?: string | number; // For quiz mode
   points: number; // Points for this question
@@ -26,6 +31,7 @@ export interface Question {
   source: string;
   order: number;
   required: boolean;
+  fileUploadConfig?: FileUploadConfig; // For file upload questions
 }
 
 export interface User {
@@ -44,6 +50,9 @@ export interface Response {
   maxScore?: number; // Total possible points
   correctAnswers?: number; // Number of correct answers
   totalQuestions?: number; // Total number of questions
+  passed?: boolean; // Whether user passed the quiz
+  certificateGenerated?: boolean; // Whether certificate was generated
+  uploadedFiles?: UploadedFile[]; // Files uploaded by user
   timeTaken: number;
   submittedAt: string;
 }
@@ -90,7 +99,8 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'editor' | 'viewer' | 'reviewer' | 'manager' | 'custom';
+  permissions?: Permission[]; // For custom roles
   formAccess: string[]; // Array of form IDs they can access
   invitedBy: string;
   invitedAt: string;
@@ -111,4 +121,102 @@ export interface ActivityLog {
   formId?: string;
   details: string;
   timestamp: string;
+}
+// New Phase 3 Types
+
+export interface Certificate {
+  id: string;
+  formId: string;
+  template: CertificateTemplate;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CertificateTemplate {
+  id: string;
+  name: string;
+  backgroundImage?: string;
+  logoImage?: string;
+  signatureImage?: string;
+  layout: {
+    title: { text: string; x: number; y: number; fontSize: number; color: string };
+    recipientName: { x: number; y: number; fontSize: number; color: string };
+    score: { x: number; y: number; fontSize: number; color: string; show: boolean };
+    date: { x: number; y: number; fontSize: number; color: string };
+    formTitle: { x: number; y: number; fontSize: number; color: string };
+  };
+}
+
+export interface ConditionalRule {
+  id: string;
+  condition: {
+    type: 'score' | 'question_answer' | 'completion';
+    questionId?: string;
+    operator: 'equals' | 'greater_than' | 'less_than' | 'contains';
+    value: string | number;
+  };
+  action: {
+    type: 'show_message' | 'redirect' | 'skip_question' | 'send_email';
+    value: string;
+    target?: string;
+  };
+}
+
+export interface NotificationSettings {
+  emailOnSubmission: boolean;
+  emailSubject: string;
+  emailBody: string;
+  adminNotification: boolean;
+  successBanner: {
+    enabled: boolean;
+    message: string;
+    type: 'success' | 'info' | 'warning';
+  };
+}
+
+export interface CustomEndPage {
+  enabled: boolean;
+  heading: string;
+  message: string;
+  image?: string;
+  ctaButtons: {
+    text: string;
+    url: string;
+    type: 'primary' | 'secondary';
+  }[];
+  showScore: boolean;
+  showCertificateDownload: boolean;
+}
+
+export interface FileUploadConfig {
+  maxFileSize: number; // in MB
+  allowedFormats: string[]; // e.g., ['.pdf', '.jpg', '.png']
+  multiple: boolean;
+}
+
+export interface UploadedFile {
+  id: string;
+  questionId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+  fileData: string; // base64 encoded file data
+}
+
+export interface Permission {
+  action: 'view' | 'edit' | 'delete' | 'create' | 'export' | 'manage_users';
+  resource: 'forms' | 'responses' | 'analytics' | 'settings' | 'certificates';
+  granted: boolean;
+}
+
+export interface QuizResult {
+  score: number;
+  maxScore: number;
+  percentage: number;
+  passed: boolean;
+  correctAnswers: number;
+  totalQuestions: number;
+  timeTaken: number;
+  certificateEligible: boolean;
 }

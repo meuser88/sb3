@@ -1,0 +1,121 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ClipboardList, BarChart3, Plus, Home, Settings, Users } from 'lucide-react';
+import { storage } from '../utils/storage';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const location = useLocation();
+  const brandSettings = storage.getBrandSettings();
+
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50" style={{ '--primary-color': brandSettings.primaryColor } as any}>
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link to="/" className="flex items-center space-x-2">
+                {brandSettings.logoUrl ? (
+                  <img src={brandSettings.logoUrl} alt={brandSettings.brandName} className="h-8 w-8" />
+                ) : (
+                  <ClipboardList className="h-8 w-8" style={{ color: brandSettings.primaryColor }} />
+                )}
+                <span className="text-xl font-bold text-gray-900">{brandSettings.brandName}</span>
+              </Link>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Link
+                to="/"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/') && location.pathname === '/'
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/') && location.pathname === '/' ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <Home className="h-4 w-4" />
+                <span>Home</span>
+              </Link>
+              
+              <Link
+                to="/create"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/create')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/create') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create</span>
+              </Link>
+              
+              <Link
+                to="/dashboard"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/dashboard')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/dashboard') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+              
+              <Link
+                to="/admin/users"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/admin')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/admin') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <Users className="h-4 w-4" />
+                <span>Team</span>
+              </Link>
+              
+              <Link
+                to="/settings"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/settings')
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive('/settings') ? { backgroundColor: brandSettings.primaryColor } : {}}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </main>
+      
+      {brandSettings.showPoweredBy && (
+        <footer className="bg-white border-t py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p className="text-sm text-gray-500">
+              Powered by <span className="font-medium">Formora</span>
+            </p>
+          </div>
+        </footer>
+      )}
+    </div>
+  );
+};
+
+export default Layout;

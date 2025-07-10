@@ -1,0 +1,606 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Clock, User, Mail, Hash, ChevronRight, Brain, Award, CheckCircle, XCircle } from 'lucide-react';
+import { storage } from '../utils/storage';
+import { generateId, shuffleArray, formatTime } from '../utils';
+import { User as UserType, Response, Question } from '../types';
+
+const AttemptForm: React.FC = () => {
+  const { formId } = useParams<{ formId: string }>();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState(storage.getForm(formId!));
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [user, setUser] = useState<UserType>({
+    id: generateId(),
+    name: '',
+    email: '',
+    roll: ''
+  });
+  const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [currentStep, setCurrentStep] = useState<'identity' | 'form' | 'results'>('identity');
+  const [startTime, setStartTime] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quizResults, setQuizResults] = useState<{
+    score: number;
+    maxScore: number;
+    correctAnswers: number;
+    totalQuestions: number;
+    results: Array<{
+      question: Question;
+      userAnswer: string | number;
+      isCorrect: boolean;
+      correctAnswer?: string | number;
+    }>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!form) return;
+
+    const formQuestions = storage.getQuestions(formId!);
+    const questionsToShow = form.shuffle ? shuffleArray(formQuestions) : formQuestions;
+    setQuestions(questionsToShow);
+
+    if (form.timer) {
+      setTimeLeft(form.timer);
+    }
+  }, [form, formId]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (currentStep === 'form' && form?.timer && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [currentStep, form?.timer, timeLeft]);
+
+  if (!form) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Form Not Found</h1>
+          <p className="text-gray-600">The form you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const startForm = () => {
+    if (!user.name.trim() || !user.email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check if user already took this quiz and retakes are not allowed
+    if (form.type === 'quiz' && !form.allowRetake) {
+      const existingResponse = storage.getResponses(formId).find(r => {
+        const responseUser = storage.getUser(r.userId);
+        return responseUser?.email === user.email;
+      });
+      
+      if (existingResponse) {
+        alert('You have already taken this quiz and retakes are not allowed.');
+        return;
+      }
+    }
+
+    storage.saveUser(user);
+    setStartTime(Date.now());
+    setCurrentStep('form');
+  };
+
+  const updateAnswer = (questionId: string, value: string | number) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }));
+  };
+
+  const calculateQuizResults = () => {
+    if (form.type !== 'quiz') return null;
+
+    let score = 0;
+    let correctAnswers = 0;
+    const maxScore = questions.reduce((sum, q) => sum + q.points, 0);
+    const results = questions.map(question => {
+      const userAnswer = answers[question.id];
+      let isCorrect = false;
+
+      if (question.type === 'mcq' || question.type === 'dropdown' || question.type === 'true_false') {
+        isCorrect = userAnswer === question.correctAnswer;
+      } else if (question.type === 'rating') {
+        isCorrect = userAnswer === question.correctAnswer;
+      } else if (question.type === 'short_text' || question.type === 'paragraph') {
+        // For text questions, we'll mark as correct if there's an answer (manual grading needed)
+        isCorrect = Boolean(userAnswer && userAnswer.toString().trim());
+      }
+
+      if (isCorrect) {
+        score += question.points;
+        correctAnswers++;
+      }
+
+      return {
+        question,
+        userAnswer,
+        isCorrect,
+        correctAnswer: question.correctAnswer
+      };
+    });
+
+    return {
+      score,
+      maxScore,
+      correctAnswers,
+      totalQuestions: questions.length,
+      results
+    };
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+
+    try {
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      const results = calculateQuizResults();
+      
+      const response: Response = {
+        id: generateId(),
+        formId: form.id,
+        userId: user.id,
+        answers,
+        score: results?.score,
+        maxScore: results?.maxScore,
+        correctAnswers: results?.correctAnswers,
+        totalQuestions: results?.totalQuestions,
+        timeTaken,
+        submittedAt: new Date().toISOString()
+      };
+
+      storage.saveResponse(response);
+
+      if (form.type === 'quiz' && form.showResults && results) {
+        setQuizResults(results);
+        setCurrentStep('results');
+      } else {
+        navigate('/thanks', { 
+          state: { 
+            formTitle: form.title, 
+            userName: user.name,
+            submittedAt: response.submittedAt,
+            isQuiz: form.type === 'quiz',
+            score: results?.score,
+            maxScore: results?.maxScore
+          } 
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Error submitting form. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canSubmit = () => {
+    if (form.requireAll) {
+      return questions.every(q => q.required ? answers[q.id] !== undefined : true);
+    }
+    return Object.keys(answers).length > 0;
+  };
+
+  const renderQuestion = (question: Question) => {
+    const value = answers[question.id];
+
+    switch (question.type) {
+      case 'short_text':
+        return (
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => updateAnswer(question.id, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter your answer..."
+            required={question.required}
+          />
+        );
+
+      case 'paragraph':
+        return (
+          <textarea
+            value={value || ''}
+            onChange={(e) => updateAnswer(question.id, e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter your detailed answer..."
+            required={question.required}
+          />
+        );
+
+      case 'mcq':
+      case 'true_false':
+        return (
+          <div className="space-y-2">
+            {question.options.map((option, index) => (
+              <label key={index} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name={question.id}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => updateAnswer(question.id, e.target.value)}
+                  className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
+                  required={question.required}
+                />
+                <span className="text-gray-700">{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'dropdown':
+        return (
+          <select
+            value={value || ''}
+            onChange={(e) => updateAnswer(question.id, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            required={question.required}
+          >
+            <option value="">Select an option...</option>
+            {question.options.map((option, index) => (
+              <option key={index} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+
+      case 'rating':
+        return (
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3, 4, 5].map(rating => (
+              <label key={rating} className="flex items-center space-x-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name={question.id}
+                  value={rating}
+                  checked={value === rating}
+                  onChange={(e) => updateAnswer(question.id, parseInt(e.target.value))}
+                  className="sr-only"
+                  required={question.required}
+                />
+                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-colors ${
+                  value === rating
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'border-gray-300 text-gray-600 hover:border-blue-400'
+                }`}>
+                  {rating}
+                </div>
+              </label>
+            ))}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (currentStep === 'identity') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-sm border max-w-md w-full">
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center mb-4">
+              {form.type === 'quiz' ? (
+                <Brain className="h-12 w-12 text-blue-600" />
+              ) : (
+                <ClipboardList className="h-12 w-12 text-green-600" />
+              )}
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{form.title}</h1>
+            {form.description && (
+              <p className="text-gray-600">{form.description}</p>
+            )}
+            <p className="text-sm text-gray-500 mt-2">Created by {form.createdBy}</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="inline h-4 w-4 mr-1" />
+                Full Name *
+              </label>
+              <input
+                type="text"
+                value={user.name}
+                onChange={(e) => setUser(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Mail className="inline h-4 w-4 mr-1" />
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={user.email}
+                onChange={(e) => setUser(prev => ({ ...prev, email: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Hash className="inline h-4 w-4 mr-1" />
+                Roll No / ID
+              </label>
+              <input
+                type="text"
+                value={user.roll}
+                onChange={(e) => setUser(prev => ({ ...prev, roll: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your roll number or ID"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={startForm}
+            className={`w-full mt-6 flex items-center justify-center space-x-2 px-4 py-2 text-white rounded-md transition-colors ${
+              form.type === 'quiz' 
+                ? 'bg-blue-600 hover:bg-blue-700' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            <span>Start {form.type === 'quiz' ? 'Quiz' : 'Survey'}</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+
+          {form.timer && (
+            <div className="mt-4 p-3 bg-yellow-50 rounded-md">
+              <div className="flex items-center space-x-2 text-yellow-800">
+                <Clock className="h-4 w-4" />
+                <span className="text-sm">
+                  This {form.type} has a {formatTime(form.timer)} time limit
+                </span>
+              </div>
+            </div>
+          )}
+
+          {form.type === 'quiz' && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+              <div className="flex items-center space-x-2 text-blue-800">
+                <Award className="h-4 w-4" />
+                <span className="text-sm">
+                  Total Points: {questions.reduce((sum, q) => sum + q.points, 0)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 'results' && quizResults) {
+    const percentage = Math.round((quizResults.score / quizResults.maxScore) * 100);
+    
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-sm border">
+            {/* Results Header */}
+            <div className="p-6 border-b border-gray-200 text-center">
+              <div className="mb-4">
+                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                  percentage >= 70 ? 'bg-green-100' : percentage >= 50 ? 'bg-yellow-100' : 'bg-red-100'
+                }`}>
+                  <Award className={`h-8 w-8 ${
+                    percentage >= 70 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                  }`} />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Quiz Complete!</h1>
+                <p className="text-gray-600">Here are your results, {user.name}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{quizResults.score}</div>
+                  <div className="text-sm text-blue-800">Points Earned</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-600">{quizResults.maxScore}</div>
+                  <div className="text-sm text-gray-800">Total Points</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{quizResults.correctAnswers}</div>
+                  <div className="text-sm text-green-800">Correct Answers</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">{percentage}%</div>
+                  <div className="text-sm text-purple-800">Score Percentage</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Question Results */}
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Question Review</h2>
+              <div className="space-y-6">
+                {quizResults.results.map((result, index) => (
+                  <div key={result.question.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-medium text-gray-900">
+                        {index + 1}. {result.question.text}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {result.isCorrect ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-600" />
+                        )}
+                        <span className="text-sm font-medium text-gray-600">
+                          {result.question.points} pts
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">Your Answer: </span>
+                        <span className={result.isCorrect ? 'text-green-600' : 'text-red-600'}>
+                          {result.userAnswer || 'No answer'}
+                        </span>
+                      </div>
+                      
+                      {result.correctAnswer && !result.isCorrect && (
+                        <div>
+                          <span className="font-medium text-gray-700">Correct Answer: </span>
+                          <span className="text-green-600">{result.correctAnswer}</span>
+                        </div>
+                      )}
+
+                      {result.question.explanation && (
+                        <div className="bg-blue-50 p-3 rounded-md mt-2">
+                          <span className="font-medium text-blue-800">Explanation: </span>
+                          <span className="text-blue-700">{result.question.explanation}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t border-gray-200 flex justify-center space-x-4">
+              <button
+                onClick={() => navigate('/thanks', { 
+                  state: { 
+                    formTitle: form.title, 
+                    userName: user.name,
+                    submittedAt: new Date().toISOString(),
+                    isQuiz: true,
+                    score: quizResults.score,
+                    maxScore: quizResults.maxScore
+                  } 
+                })}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Continue
+              </button>
+              {form.allowRetake && (
+                <button
+                  onClick={() => {
+                    setAnswers({});
+                    setCurrentStep('form');
+                    setStartTime(Date.now());
+                    if (form.timer) setTimeLeft(form.timer);
+                  }}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  Retake Quiz
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-sm border">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{form.title}</h1>
+                <p className="text-gray-600">Welcome, {user.name}</p>
+                {form.type === 'quiz' && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Total Points: {questions.reduce((sum, q) => sum + q.points, 0)}
+                  </p>
+                )}
+              </div>
+              {form.timer && (
+                <div className="flex items-center space-x-2 text-orange-600">
+                  <Clock className="h-5 w-5" />
+                  <span className="text-lg font-mono">{formatTime(timeLeft)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Questions */}
+          <div className="p-6 space-y-8">
+            {questions.map((question, index) => (
+              <div key={question.id} className="border-b border-gray-100 pb-6 last:border-b-0">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-medium text-gray-900">
+                      {index + 1}. {question.text}
+                      {question.required && <span className="text-red-500 ml-1">*</span>}
+                    </h2>
+                    {form.type === 'quiz' && (
+                      <div className="flex items-center space-x-1 text-blue-600">
+                        <Award className="h-4 w-4" />
+                        <span className="text-sm font-medium">{question.points} pts</span>
+                      </div>
+                    )}
+                  </div>
+                  {question.source && (
+                    <p className="text-sm text-gray-500">Topic: {question.source}</p>
+                  )}
+                </div>
+                {renderQuestion(question)}
+              </div>
+            ))}
+          </div>
+
+          {/* Submit */}
+          <div className="p-6 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                {Object.keys(answers).length} of {questions.length} questions answered
+              </p>
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit() || isSubmitting}
+                className={`px-6 py-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  form.type === 'quiz' 
+                    ? 'bg-blue-600 hover:bg-blue-700' 
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isSubmitting ? 'Submitting...' : `Submit ${form.type === 'quiz' ? 'Quiz' : 'Survey'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AttemptForm;
